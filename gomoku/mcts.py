@@ -32,8 +32,13 @@ class Node:
         return action_idx, self.children[action_idx]
     
     def expand(self, action_probs):
-        for item in action_probs:
+        d = np.random.dirichlet(np.ones(len(action_probs))*0.3)
+        for idx, item in enumerate(action_probs):
             move_idx, prob = item
+            # # add noise
+            if self.parent is None:
+                # add dirichlet noise
+                prob =  0.75*prob + 0.25*d[idx]
             self.children[move_idx] = Node(self, prob)
 
     def update(self, value):

@@ -3,6 +3,7 @@ from agent import Agent
 from constants import *
 from board import Board
 from utils import *
+import time
 
 
 class DataGenerator:
@@ -83,7 +84,7 @@ class DataGenerator:
             if winner_model == NEW_MODEL:
                 new_agent_win_count += 1
 
-            print(f"batch: {batch_no} - thread: {thread_id} - data generated: episode: {episode_count} - winner_model: {winner_model}")
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Batch: {batch_no} - Thread: {thread_id} - Data generated: Episode: {episode_count} - Winner model: {winner_model} - winner: {winner} ")
             episode_count += 1
 
         return data, new_agent_win_count, episode_count

@@ -2,6 +2,7 @@ import copy
 import random
 import numpy as np
 from constants import *
+import time
 
 
 class Board:
@@ -49,15 +50,13 @@ class Board:
         while True:
             row = input("Enter row: ")
             col = input("Enter col: ")
-            # check row and col is int
             if not row.isdigit() or not col.isdigit():
-                print("Invalid input")
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Invalid input")
                 continue
             if self.is_valid_move((int(row), int(col))):
                 return (int(row), int(col))
             else:
-
-                print("Invalid move")
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Invalid move")
 
     def is_valid_move(self, move):
         return move in self.available_moves

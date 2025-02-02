@@ -13,20 +13,25 @@ def test_game(old_agent = None, new_agent = None):
         current_player = board.get_current_player()
         if current_player == BLACK_PLAYER:
             #move_idx = agent.get_move(board)
-            move_idx = new_agent.get_action(board, return_prob=False)
-            # move_idx = old_agent.get_action(board, return_prob=False)
-            # new_agent.update_with_move_idx(move_idx)
+            #move_idx = new_agent.get_action(board, return_prob=False)
+            #old_agent.update_with_move_idx(move_idx)
+            #move = board.get_player_move()
+            #move_idx = move[0] * BOARD_SIZE + move[1]
+            move = board.get_player_move()
+            move_idx = move[0] * BOARD_SIZE + move[1]
         else:
             #move = board.get_random_move()
             move_idx = old_agent.get_action(board, return_prob=False)
             # move_idx = new_agent.get_action(board, return_prob=False)
-            # old_agent.update_with_move_idx(move_idx)
-            # #move = board.get_player_move()
+            new_agent.update_with_move_idx(move_idx)
+            # move = board.get_player_move()
+            # move_idx = move[0] * BOARD_SIZE + move[1]
 
 
         move = index_to_move(move_idx)
         board.move(move)
         print("=========================================================")
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] player: {current_player} - move_idx: {move_idx} - Move: {move}")
         board.print_board()
         winner = board.check_game_over(move)
         if winner != WINNER_NONE:

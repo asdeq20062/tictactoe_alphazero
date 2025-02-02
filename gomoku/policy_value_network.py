@@ -1,9 +1,11 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from constants import BOARD_SIZE
 from utils import *
+import time
 
 class ResBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -30,8 +32,8 @@ class A2C(nn.Module):
 
         # middle blocks (a series of res blocks)
         self.res1 = ResBlock(128, 128)
-        self.res2 = ResBlock(128, 128)
-        self.res3 = ResBlock(128, 128)
+        # self.res2 = ResBlock(128, 128)
+        # self.res3 = ResBlock(128, 128)
 
         # policy head
         self.policy_conv = nn.Conv2d(128, 16, kernel_size=1, stride=1, padding=0)
@@ -51,8 +53,6 @@ class A2C(nn.Module):
 
         # middle blocks
         x = self.res1(x)
-        x = self.res2(x)
-        x = self.res3(x)
 
         # policy head
         policy = self.policy_conv(x)
@@ -60,7 +60,7 @@ class A2C(nn.Module):
         policy = self.policy_relu(policy)
         policy = policy.view(policy.size(0), -1)
         policy = self.policy_fc(policy)
-        policy = F.softmax(policy, dim=1)   
+        policy = F.log_softmax(policy, dim=1)   
 
         # value head
         value = self.value_conv(x)
@@ -76,12 +76,11 @@ class PolicyValueNetwork:
     def __init__(self, model_file=None):
         self.model = A2C()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)
         self.mse_loss = nn.MSELoss()
-        self.cross_entropy_loss = nn.CrossEntropyLoss()
         if model_file:
             self.model.load_state_dict(torch.load(model_file, weights_only=True))
         self.model.to(self.device)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001, weight_decay=1e-4)
 
     def evaluate(self, board):
         self.model.eval()
@@ -95,7 +94,7 @@ class PolicyValueNetwork:
         action_probs, values = self.evaluate(board)
 
         # Get first batch item
-        action_prob = action_probs[0]
+        action_prob = torch.exp(action_probs[0])
         value = values[0]
 
         # Convert available moves to tensor mask
@@ -118,14 +117,13 @@ class PolicyValueNetwork:
         # forward
         self.model.train()
         self.optimizer.zero_grad()
-        policy, value = self.model(state_batch)
+        log_act_probs, value = self.model(state_batch)
 
         # compute loss
         value_loss = self.mse_loss(value, mcts_value_batch)
-        policy_loss = self.cross_entropy_loss(policy, mcts_action_probs_batch)
-        # policy_loss = -torch.mean(torch.sum(mcts_action_probs_batch * torch.log(policy), dim=1))
+        policy_loss = -torch.mean(torch.sum(mcts_action_probs_batch*log_act_probs, 1))
         loss = policy_loss + value_loss
-        print(f"loss: {loss.item()}")
+        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Loss: {loss.item()}, value_loss: {value_loss.item()}, policy_loss: {policy_loss.item()}")
 
         # backward
         loss.backward()
