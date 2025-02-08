@@ -27,6 +27,9 @@ def evaluate_model():
 
 def main():
 
+    replay_memory = ReplayMemory(capacity=10000)
+    lr_multiplier = 1
+
     for batch_no in range(2000):
         num_processes = 5
         pool = Pool(processes=num_processes)
@@ -34,7 +37,9 @@ def main():
 
         start_time = time.time()
         games_count_for_each_process = 5
-        args_list = [(i, games_count_for_each_process, batch_no) for i in range(num_processes)]
+
+        policy_value_network = PolicyValueNetwork(NEW_MODEL_FILE)
+        args_list = [(i, games_count_for_each_process, batch_no, policy_value_network) for i in range(num_processes)]
 
         # Run processes and get results
         results = pool.map(data_worker, args_list)
@@ -52,34 +57,52 @@ def main():
         data = data_augment(data)
 
         # save experience
-        replay_memory = ReplayMemoryRedis(capacity=10000)
         replay_memory.push(data)
         
         # 训练新模型
         # use dataloader to load data
         dataset = GameDataset(data)
-        dataloader = DataLoader(dataset, batch_size=512, shuffle=True)\
+        dataloader = DataLoader(dataset, batch_size=512, shuffle=True)
 
-        for i in range(5):
+        for states, act_probs, rewards in dataloader:   
             policy_value_network = PolicyValueNetwork(NEW_MODEL_FILE)
-            for states, act_probs, rewards in dataloader:   
-                memory_batch = replay_memory.sample(400)
-                for memory_item in memory_batch:
+            memory_batch = replay_memory.sample(500)
+            for memory_item in memory_batch:
 
-                    memory_states_batch = memory_item[0].unsqueeze(0)
-                    memory_act_probs_batch = memory_item[1].unsqueeze(0)
-                    memory_rewards_batch = memory_item[2].unsqueeze(0)
-                    states = torch.cat([states, memory_states_batch], dim=0)
-                    act_probs = torch.cat([act_probs, memory_act_probs_batch], dim=0)
-                    rewards = torch.cat([rewards, memory_rewards_batch], dim=0)
+                memory_states_batch = memory_item[0].unsqueeze(0)
+                memory_act_probs_batch = memory_item[1].unsqueeze(0)
+                memory_rewards_batch = memory_item[2].unsqueeze(0)
+                states = torch.cat([states, memory_states_batch], dim=0)
+                act_probs = torch.cat([act_probs, memory_act_probs_batch], dim=0)
+                rewards = torch.cat([rewards, memory_rewards_batch], dim=0)
+            
+            states = states.to(policy_value_network.get_device())
+            act_probs = act_probs.to(policy_value_network.get_device())
+            rewards = rewards.to(policy_value_network.get_device())
 
-                policy_value_network.train(states, act_probs, rewards)  \
+
+            for i in range(5):
+                log_act_probs, value = policy_value_network.train(states, act_probs, rewards, lr_multiplier)
+
+                new_log_act_probs, new_value = policy_value_network.model(states)
+                kl = torch.mean(torch.sum(torch.exp(log_act_probs) * (log_act_probs - new_log_act_probs), axis=1))
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] KL: {kl}")
+
+                if kl > KL_TARGET * 4:  # early stopping if D_KL diverges badly
+                    print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] KL: {kl}, early stopping")
+                    break 
+
+            if kl > KL_TARGET * 1.5:
+                lr_multiplier = lr_multiplier * 0.5
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] KL: {kl}, lr_multiplier: {lr_multiplier}")
+            elif kl < KL_TARGET * 0.5:
+                lr_multiplier = lr_multiplier * 2
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] KL: {kl}, lr_multiplier: {lr_multiplier}")
+
 
         policy_value_network.save(NEW_MODEL_FILE)
+        policy_value_network.save(OLD_MODEL_FILE)
 
-        # replace old model with new model
-        torch.save(policy_value_network.model.state_dict(), OLD_MODEL_FILE)
-        print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Old model replaced with new model")
 
         # 清理内存
         del policy_value_network

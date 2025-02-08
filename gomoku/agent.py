@@ -1,6 +1,6 @@
 
 import numpy as np
-from constants import BOARD_SIZE
+from constants import BOARD_SIZE, DIRICHLET_ALPHA
 from mcts import MCTS
 
 
@@ -26,7 +26,7 @@ class Agent:
         move_probs[list(act_idxs)] = probs
 
         if self.is_self_play:
-            move_idx = np.random.choice(act_idxs, p=0.75*probs + 0.25*np.random.dirichlet(0.3 * np.ones(len(probs))))
+            move_idx = np.random.choice(act_idxs, p=0.75*probs + 0.25*np.random.dirichlet(DIRICHLET_ALPHA * np.ones(len(probs))))
             self.mcts_player.update_with_move_idx(move_idx)
         else:
             move_idx = np.random.choice(act_idxs, p=probs)

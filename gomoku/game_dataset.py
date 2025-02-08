@@ -7,6 +7,7 @@ class GameDataset(Dataset):
         self.states_batch = []
         self.act_probs_batch = []
         self.rewards_batch = []
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         for item in data:
             board_states = item[0]
@@ -22,14 +23,16 @@ class GameDataset(Dataset):
                 empty_board = np.array(empty_board).copy()
                 current_player_board = np.array(current_player_board).copy()
 
-                black_player_board_tensor = torch.tensor(black_player_board, dtype=torch.float32).unsqueeze(0)
-                white_player_board_tensor = torch.tensor(white_player_board, dtype=torch.float32).unsqueeze(0) 
-                empty_board_tensor = torch.tensor(empty_board, dtype=torch.float32).unsqueeze(0)
-                current_player_board_tensor = torch.tensor(current_player_board, dtype=torch.float32).unsqueeze(0)
+                black_player_board_tensor = torch.tensor(black_player_board, dtype=torch.float32, device=self.device).unsqueeze(0)
+                white_player_board_tensor = torch.tensor(white_player_board, dtype=torch.float32, device=self.device).unsqueeze(0) 
+                empty_board_tensor = torch.tensor(empty_board, dtype=torch.float32, device=self.device).unsqueeze(0)
+
+                current_player_board_tensor = torch.tensor(current_player_board, dtype=torch.float32, device=self.device).unsqueeze(0)
 
                 states = torch.cat([black_player_board_tensor, white_player_board_tensor, empty_board_tensor, current_player_board_tensor], dim=0)
-                act_prob = torch.tensor(act_probs[i], dtype=torch.float32)
-                reward = torch.tensor(rewards[i], dtype=torch.float32)
+                act_prob = torch.tensor(act_probs[i], dtype=torch.float32, device=self.device)
+                reward = torch.tensor(rewards[i], dtype=torch.float32, device=self.device)
+
 
                 self.states_batch.append(states)
                 self.act_probs_batch.append(act_prob)

@@ -1,5 +1,6 @@
 
 import random
+import numpy as np
 import torch
 
 
@@ -8,6 +9,7 @@ class ReplayMemory:
         self.capacity = capacity
         self.memory = []
         self.position = 0
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def push(self, data):
 
@@ -20,14 +22,22 @@ class ReplayMemory:
             for i in range(len(board_states)):
                 black_player_board, white_player_board, empty_board, current_player_board = board_states[i]
         
-                black_player_board_tensor = torch.tensor(black_player_board, dtype=torch.float32).unsqueeze(0)
-                white_player_board_tensor = torch.tensor(white_player_board, dtype=torch.float32).unsqueeze(0) 
-                empty_board_tensor = torch.tensor(empty_board, dtype=torch.float32).unsqueeze(0)
-                current_player_board_tensor = torch.tensor(current_player_board, dtype=torch.float32).unsqueeze(0)
+                # Make copies to handle negative strides
+                black_player_board = np.array(black_player_board).copy()
+                white_player_board = np.array(white_player_board).copy()
+                empty_board = np.array(empty_board).copy()
+                current_player_board = np.array(current_player_board).copy()
+
+                black_player_board_tensor = torch.tensor(black_player_board, dtype=torch.float32, device=self.device).unsqueeze(0)
+                white_player_board_tensor = torch.tensor(white_player_board, dtype=torch.float32, device=self.device).unsqueeze(0) 
+                empty_board_tensor = torch.tensor(empty_board, dtype=torch.float32, device=self.device).unsqueeze(0)
+
+                current_player_board_tensor = torch.tensor(current_player_board, dtype=torch.float32, device=self.device).unsqueeze(0)
 
                 states = torch.cat([black_player_board_tensor, white_player_board_tensor, empty_board_tensor, current_player_board_tensor], dim=0)
-                act_prob = torch.tensor(act_probs[i], dtype=torch.float32)
-                reward = torch.tensor(rewards[i], dtype=torch.float32)
+                act_prob = torch.tensor(act_probs[i], dtype=torch.float32, device=self.device)
+                reward = torch.tensor(rewards[i], dtype=torch.float32, device=self.device)
+
 
                 self.memory.append((states, act_prob, reward))
                 count += 1

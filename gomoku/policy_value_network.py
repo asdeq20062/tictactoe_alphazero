@@ -85,8 +85,7 @@ class PolicyValueNetwork:
     def evaluate(self, board):
         self.model.eval()
         with torch.no_grad():
-            state = convert_board_to_state_tensor(board)
-            state = state.to(self.device)
+            state = convert_board_to_state_tensor(board, self.device)
             action_probs, values = self.model(state)
         return action_probs, values
     
@@ -108,7 +107,17 @@ class PolicyValueNetwork:
     def save(self, model_file):
         torch.save(self.model.state_dict(), model_file)
 
-    def train(self, state_batch, mcts_action_probs_batch, mcts_value_batch):
+    def adjust_learning_rate(self, lr_multiplier):
+        for param_group in self.optimizer.param_groups:
+            param_group['lr'] *= lr_multiplier
+    
+    def get_device(self):
+        return self.device
+
+    def train(self, state_batch, mcts_action_probs_batch, mcts_value_batch, lr_multiplier):
+        self.adjust_learning_rate(lr_multiplier)
+
+
         # send data to device
         state_batch = state_batch.to(self.device)
         mcts_action_probs_batch = mcts_action_probs_batch.to(self.device)
@@ -128,4 +137,6 @@ class PolicyValueNetwork:
         # backward
         loss.backward()
         self.optimizer.step()
+
+        return log_act_probs, value
 

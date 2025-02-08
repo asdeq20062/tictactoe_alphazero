@@ -11,6 +11,7 @@ class ReplayMemoryRedis:
         self.capacity = capacity
         self.redis_client = redis.Redis(host='localhost', port=6379, db=0)
         self.key = 'replay_memory'
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def push(self, data):
 
@@ -28,14 +29,16 @@ class ReplayMemoryRedis:
                 empty_board = np.array(empty_board).copy()
                 current_player_board = np.array(current_player_board).copy()
 
-                black_player_board_tensor = torch.tensor(black_player_board, dtype=torch.float32).unsqueeze(0)
-                white_player_board_tensor = torch.tensor(white_player_board, dtype=torch.float32).unsqueeze(0) 
-                empty_board_tensor = torch.tensor(empty_board, dtype=torch.float32).unsqueeze(0)
-                current_player_board_tensor = torch.tensor(current_player_board, dtype=torch.float32).unsqueeze(0)
+                black_player_board_tensor = torch.tensor(black_player_board, dtype=torch.float32, device=self.device).unsqueeze(0)
+                white_player_board_tensor = torch.tensor(white_player_board, dtype=torch.float32, device=self.device).unsqueeze(0) 
+                empty_board_tensor = torch.tensor(empty_board, dtype=torch.float32, device=self.device).unsqueeze(0)
+
+                current_player_board_tensor = torch.tensor(current_player_board, dtype=torch.float32, device=self.device).unsqueeze(0)
 
                 states = torch.cat([black_player_board_tensor, white_player_board_tensor, empty_board_tensor, current_player_board_tensor], dim=0)
-                act_prob = torch.tensor(act_probs[i], dtype=torch.float32)
-                reward = torch.tensor(rewards[i], dtype=torch.float32)
+                act_prob = torch.tensor(act_probs[i], dtype=torch.float32, device=self.device)
+                reward = torch.tensor(rewards[i], dtype=torch.float32, device=self.device)
+
 
                 data = pickle.dumps((states, act_prob, reward)) # serialize data
                 self.redis_client.lpush(self.key, data)
