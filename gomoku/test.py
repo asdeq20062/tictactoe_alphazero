@@ -13,19 +13,19 @@ def test_game(old_agent = None, new_agent = None):
         current_player = board.get_current_player()
         if current_player == BLACK_PLAYER:
             #move_idx = agent.get_move(board)
-            #move_idx = new_agent.get_action(board, return_prob=False)
+            move_idx = new_agent.get_action(board, return_prob=False)
             #old_agent.update_with_move_idx(move_idx)
             #move = board.get_player_move()
             #move_idx = move[0] * BOARD_SIZE + move[1]
-            move = board.get_player_move()
-            move_idx = move[0] * BOARD_SIZE + move[1]
+            #move = board.get_player_move()
+            #move_idx = move[0] * BOARD_SIZE + move[1]
         else:
             #move = board.get_random_move()
-            move_idx = old_agent.get_action(board, return_prob=False)
-            # move_idx = new_agent.get_action(board, return_prob=False)
-            new_agent.update_with_move_idx(move_idx)
-            # move = board.get_player_move()
-            # move_idx = move[0] * BOARD_SIZE + move[1]
+            #move_idx = old_agent.get_action(board, return_prob=False)
+            move_idx = new_agent.get_action(board, return_prob=False)
+            #new_agent.update_with_move_idx(move_idx)
+            #move = board.get_player_move()
+            #move_idx = move[0] * BOARD_SIZE + move[1]
 
 
         move = index_to_move(move_idx)
@@ -47,13 +47,13 @@ new_model_file = NEW_MODEL_FILE
 new_policy_value_network = PolicyValueNetwork(new_model_file)
 new_agent = Agent(new_policy_value_network, is_self_play=False)
 
-test_game(old_agent, new_agent)
+#test_game(old_agent, new_agent)
 
 
-# old_policy_value_network = PolicyValueNetwork(OLD_MODEL_FILE)
-# new_policy_value_network = PolicyValueNetwork(NEW_MODEL_FILE)
+old_policy_value_network = PolicyValueNetwork(OLD_MODEL_FILE)
+new_policy_value_network = PolicyValueNetwork(NEW_MODEL_FILE)
 
 
-# data_generator = DataGenerator(old_policy_value_network, new_policy_value_network)
-# data = data_generator.generate(1)
-# print(data)
+data_generator = DataGenerator(old_policy_value_network, new_policy_value_network)
+data = data_generator.generate(1)
+print(data)

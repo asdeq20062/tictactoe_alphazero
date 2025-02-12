@@ -1,5 +1,6 @@
 
 import random
+import numpy as np
 import torch
 
 
@@ -19,7 +20,12 @@ class ReplayMemory:
 
             for i in range(len(board_states)):
                 black_player_board, white_player_board, empty_board, current_player_board = board_states[i]
-        
+
+                black_player_board = np.array(black_player_board).copy()
+                white_player_board = np.array(white_player_board).copy()
+                empty_board = np.array(empty_board).copy()
+                current_player_board = np.array(current_player_board).copy()
+                
                 black_player_board_tensor = torch.tensor(black_player_board, dtype=torch.float32).unsqueeze(0)
                 white_player_board_tensor = torch.tensor(white_player_board, dtype=torch.float32).unsqueeze(0) 
                 empty_board_tensor = torch.tensor(empty_board, dtype=torch.float32).unsqueeze(0)

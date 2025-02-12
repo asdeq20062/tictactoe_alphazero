@@ -8,17 +8,19 @@ import time
 
 class DataGenerator:
     def __init__(self, old_policy_value_network, new_policy_value_network, self_play_mode=True):
-        self.old_agent = Agent(old_policy_value_network, is_self_play=self_play_mode)
-        self.new_agent = Agent(new_policy_value_network, is_self_play=self_play_mode)
+        self.old_policy_value_network = old_policy_value_network
+        self.new_policy_value_network = new_policy_value_network
+        self.self_play_mode = self_play_mode
+        self.new_agent = Agent(self.new_policy_value_network, is_self_play=self.self_play_mode)
 
 
     def generate(self, num_games, is_print=False, thread_id="none", batch_no="none"):
         data = []
 
         episode_count = 0
-        new_agent_win_count = 0
 
         for _ in range(num_games):
+            
             board_states = []
             move_probs = []
             rewards = []
@@ -26,27 +28,14 @@ class DataGenerator:
 
             board = Board()
 
-            if random.random() < 0.5:
-                black_player = self.old_agent
-                white_player = self.new_agent
-                black_player_model = OLD_MODEL
-                white_player_model = NEW_MODEL
-            else:
-                black_player = self.new_agent
-                white_player = self.old_agent
-                black_player_model = NEW_MODEL
-                white_player_model = OLD_MODEL
-
             while True:
                 current_player = board.get_current_player()
 
                 if current_player == BLACK_PLAYER:
-                    move_idx, move_prob = black_player.get_action(board, return_prob=True)
-                    white_player.update_with_move_idx(move_idx)
+                    move_idx, move_prob = self.new_agent.get_action(board, return_prob=True)
                     move = index_to_move(move_idx)
                 else:
-                    move_idx, move_prob = white_player.get_action(board, return_prob=True)
-                    black_player.update_with_move_idx(move_idx)
+                    move_idx, move_prob = self.new_agent.get_action(board, return_prob=True)
                     move = index_to_move(move_idx)
 
                 # append data
@@ -73,19 +62,12 @@ class DataGenerator:
                         else:
                             rewards.append(-LOSE_REWARD)
                     data.append((board_states, move_probs, rewards))
-                    break
-            
-            winner_model = None
-            if winner == WINNER_BLACK:
-                winner_model = black_player_model
-            elif winner == WINNER_WHITE:
-                winner_model = white_player_model
-            
-            if winner_model == NEW_MODEL:
-                new_agent_win_count += 1
 
-            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Batch: {batch_no} - Thread: {thread_id} - Data generated: Episode: {episode_count} - Winner model: {winner_model} - winner: {winner} ")
+                    self.new_agent.reset()
+                    break
+
+            print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] Batch: {batch_no} - Thread: {thread_id} - Data generated: Episode: {episode_count} - winner: {winner} ")
             episode_count += 1
 
-        return data, new_agent_win_count, episode_count
+        return data
 
